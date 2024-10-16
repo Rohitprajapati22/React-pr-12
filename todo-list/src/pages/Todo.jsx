@@ -1,143 +1,82 @@
-// import { getDatabase, ref, set } from "firebase/database";
-// import { app } from "../../firebase";
-// import { useEffect, useState } from "react";
-
-
-// const Todo = () => {
-//     const [todos, setTodos] = useState("");
-
-
-//     const getData = () => {
-//         let data = JSON.parse(localStorage.getItem('todo')) || [];
-//         return data;
-//     };
-
-//     const [record, setRecord] = useState(getData())
-
-//     useEffect(() => {
-//         localStorage.setItem('todo', JSON.stringify(record));
-//     }, [record]);
-
-//     const deleteTodo = (id) => {
-//         let updatedRecord = record.filter((val) => val.id !== id);
-//         setRecord(updatedRecord);
-//     };
-
-
-//     const handleSubmit = (e) => {
-//         e.preventDefault();
-//         const db = getDatabase(app)
-//         let id = Math.floor(Math.random() * 100000);
-//         set(ref(db, `users/${id}`), {
-//             todo: todos
-//         })
-//         alert("record add");
-//         setTodos("");
-
-//     }
-
-
-//     return (
-//         <div className="container">
-//             <div className="row">
-//                 <h2>Todo App</h2>
-//                 <form onSubmit={handleSubmit}>
-//                     <input type="text" placeholder="Add a Todo..." onChange={(e) => setTodos(e.target.value)} value={todos} />
-//                     <button type="submit">Submit</button>
-//                 </form>
-
-//                 <div className="todo-list">
-
-//                     {
-//                         record.map((val) => {
-//                             return (
-//                                 <div key={val}>
-//                                     <h3>{val.todos}</h3>
-//                                     <button onClick={() => deleteTodo(val.id)}>Remove</button>
-//                                 </div>
-//                             )
-
-//                         }
-//                         )}
-
-//                     {/* // <div className="todo-contnt">
-//                     //             <h5>Comb my hair</h5>
-//                     //             <button>Remove</button>
-//                     //         </div> */}
-//                 </div>
-
-//             </div>
-//         </div>
-//     )
-// }
-
-// export default Todo
-
-
-
-import { getDatabase, ref, set } from "firebase/database";
+import { addDoc, collection, getFirestore, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { app } from "../../firebase";
 import { useEffect, useState } from "react";
+import "./todo.css"
+
 
 const Todo = () => {
     const [todos, setTodos] = useState("");
+    const [record, setRecord] = useState([]);
+    const db = getFirestore(app);
 
-    // Retrieve data from localStorage
-    const getData = () => {
-        let data = JSON.parse(localStorage.getItem("todo")) || [];
-        return data;
+    const getUser = async () => {
+        try {
+            const data = collection(db, "users");
+            const users = await getDocs(data);
+            const record = users.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setRecord(record);
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
     };
 
-    const [record, setRecord] = useState(getData());
+    const handlesubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await addDoc(collection(db, "users"), {
+                todos: todos
+            });
+            alert("record add");
+            setTodos("");
+
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+    };
 
     useEffect(() => {
-        localStorage.setItem("todo", JSON.stringify(record));
-    }, [record]);
+        getUser();
+    }, [getUser]);
 
-    const deleteTodo = (id) => {
-        let updatedRecord = record.filter((val) => val.id !== id);
-        setRecord(updatedRecord);
+    const deleteUser = async (id) => {
+        try {
+            let deletedata = doc(db, `users/${id}`);
+            await deleteDoc(deletedata);
+            alert("record deleted");
+            getUser();
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!todos) return;
 
-        const db = getDatabase(app);
-        let id = Math.floor(Math.random() * 100000);
-
-
-        set(ref(db, `users/${id}`), {
-            todo: todos,
-        });
-
-        setRecord((prev) => [...prev, { id, todo: todos }]);
-
-        alert("Todo added!");
-        setTodos(""); 
-    };
 
     return (
         <div className="container">
             <div className="row">
                 <h2>Todo App</h2>
-                <form onSubmit={handleSubmit}>
-                    <input type="text" placeholder="Add a Todo..." onChange={(e) => setTodos(e.target.value)} value={todos}/>
-                    <button type="submit">Submit</button>
+                <form onSubmit={handlesubmit}>
+                    <input className="tital" type="text" placeholder="Add a Todo..." onChange={(e) => setTodos(e.target.value)} value={todos} />
+                    <button className="sub" type="submit">Submit</button>
                 </form>
-
                 <div className="todo-list">
                     {
+                        record.map((val) => {
+                            const { id, todos } = val;
+                            return (
+                                <div key={id}>
+                                    <h3>{todos}</h3>
+                                    <button className="btn" onClick={() => deleteUser(id)}>Remove</button>
+                                </div>
+                            )
 
-
-                        record.map((val) => (
-                            <div key={val.id}>
-                                <h3>{val.todo}</h3>
-                                <button onClick={() => deleteTodo(val.id)}>Remove</button>
-                            </div>
-                        ))
-
-
+                        })
                     }
                 </div>
             </div>
